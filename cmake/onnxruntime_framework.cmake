@@ -17,6 +17,8 @@ set_target_properties(onnxruntime_framework PROPERTIES FOLDER "ONNXRuntime")
 # need onnx to build to create headers that this project includes
 add_dependencies(onnxruntime_framework ${onnxruntime_EXTERNAL_DEPENDENCIES})
 
+target_link_libraries(onnxruntime_framework pthread rt config++)
+
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/../include/onnxruntime/core/framework  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/onnxruntime/core)
 if (WIN32)
     # Add Code Analysis properties to enable C++ Core checks. Have to do it via a props file include.

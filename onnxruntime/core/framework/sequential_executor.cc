@@ -14,6 +14,13 @@
 #include "core/framework/session_state.h"
 #include "core/framework/op_kernel_context_internal.h"
 #include "core/framework/utils.h"
+#include <pthread.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <libconfig.h++>
 
 namespace onnxruntime {
 
@@ -47,6 +54,26 @@ Status SequentialExecutor::Execute(const SessionState& session_state,
 
   // uncomment the line below to dump execution plan
   //std::cout << std::make_pair(p_seq_exec_plan, &session_state) << "\n";
+
+
+  // Read config to determine where to setup barriers
+  libconfig::Config lib_conf;
+  lib_conf.readFile("/home/adi/test.cfg");
+  int barrier_op_index = lib_conf.lookup("op_index");
+ 
+  LOGS(logger, INFO) << "setting up barrier at index: "<<barrier_op_index;
+
+   // Setup external barriers
+   // Open a shared memory object
+  int shm_fd = shm_open("/shared_barr", O_RDWR, 0644);
+  if(shm_fd == -1) {
+    LOGS(logger, INFO) << "Opening shared region failed\n";
+  }
+  pthread_barrier_t* shared_mem_barrier;
+  shared_mem_barrier=(pthread_barrier_t*) mmap(0, sizeof(pthread_barrier_t), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  if(shared_mem_barrier == MAP_FAILED) {
+    LOGS(logger, INFO) <<"Mapping failed with errno: "<<errno;
+  }
 
   for (const auto& node_exec_plan : exec_plan_vec) {
     if (terminate_flag_) {
